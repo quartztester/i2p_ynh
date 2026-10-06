@@ -1,0 +1,64 @@
+#!/bin/bash
+source /usr/share/yunohost/helpers
+
+ynh_abort_if_errors
+
+ynh_script_progression "Re-rendering compose config and systemd unit..."
+ynh_safe_rm "$install_dir/docker-compose.yml"
+ynh_config_add --template="docker-compose.yml" --destination="$install_dir/docker-compose.yml"
+ynh_safe_rm "/etc/systemd/system/$app.service"
+ynh_config_add_systemd
+
+ynh_script_progression "Re-rendering nginx config and refreshing logo/allowedHosts..."
+# Older installs have no domain resource — skip the console proxy then.
+domain=$(ynh_app_setting_get --key=domain || echo "")
+if [ -n "${domain:-}" ]; then
+    ynh_safe_rm "/etc/nginx/conf.d/$domain.d/$app.conf"
+    ynh_config_add_nginx
+fi
+if [ -f "$YNH_APP_BASEDIR/conf/i2p.png" ]; then
+    cp "$YNH_APP_BASEDIR/conf/i2p.png" "/usr/share/yunohost/applogos/$app.png"
+    yunohost user permission update "$app.main" --logo "/usr/share/yunohost/applogos/$app.png" || true
+fi
+
+ynh_script_progression "Pulling new I2P image and recreating container (identity volume is preserved)..."
+docker compose -f "$install_dir/docker-compose.yml" pull
+systemctl daemon-reload
+systemctl restart "$app"
+
+# Re-assert allowedHosts (domain may have changed via change-url).
+# Edit while router is down — it persists router.config on shutdown.
+if [ -n "${domain:-}" ]; then
+docker stop "$app" >/dev/null 2>&1 || true
+
+# Self-heal broken first boots: if the console config was never seeded
+# (volume has no clients.config.d — router runs headless, "we are just a
+# router"), seed it now. The image entrypoint rewrites clientApp.0.args to
+# the runtime bind IP on every boot, so 127.0.0.1 here is a safe placeholder.
+if ! docker run --rm -v "${app}-data:/d" alpine:latest sh -c 'test -d /d/clients.config.d' >/dev/null 2>&1; then
+    ynh_script_progression "Seeding missing router-console client config (healing headless first boot)..."
+    docker run --rm -v "${app}-data:/d" alpine:latest sh -c '
+        mkdir -p /d/clients.config.d
+        cat > /d/clients.config.d/00-net.i2p.router.web.RouterConsoleRunner-clients.config <<EOF
+clientApp.0.args=7657 127.0.0.1 ./webapps/
+clientApp.0.main=net.i2p.router.web.RouterConsoleRunner
+clientApp.0.name=I2P Router Console
+clientApp.0.startOnLoad=true
+EOF
+        grep -q "^routerconsole.welcomeWizardComplete=" /d/router.config 2>/dev/null || echo "routerconsole.welcomeWizardComplete=true" >> /d/router.config'
+fi
+
+docker run --rm -v "${app}-data:/d" alpine:latest sh -c "
+    line='routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain'
+    if grep -q '^routerconsole.allowedHosts=' /d/router.config 2>/dev/null; then
+        sed -i \"s|^routerconsole.allowedHosts=.*|\$line|\" /d/router.config
+    else
+        echo \"\$line\" >> /d/router.config
+    fi"
+ynh_app_setting_set --key=console_allowed_hosts --value="localhost,127.0.0.1,[::1],$domain"
+# 'restart', not 'start': after docker stop the oneshot unit may still be
+# marked active (RemainAfterExit), which makes plain start a silent no-op.
+systemctl restart "$app"
+fi
+
+ynh_script_progression "I2P upgrade complete."

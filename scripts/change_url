@@ -1,0 +1,32 @@
+#!/bin/bash
+source /usr/share/yunohost/helpers
+
+ynh_abort_if_errors
+
+if [ "$path" != "/" ]; then
+    ynh_die --message="The I2P console UI uses absolute URLs and only works at the root of a domain (path must be '/')."
+fi
+
+ynh_script_progression "Moving $app from $old_domain$old_path to $domain$path..."
+
+ynh_safe_rm "/etc/nginx/conf.d/$old_domain.d/$app.conf"
+rmdir "/etc/nginx/conf.d/$old_domain.d" 2>/dev/null || true
+
+ynh_app_setting_set --key=domain --value="$domain"
+ynh_app_setting_set --key=path --value="$path"
+
+ynh_config_add_nginx
+
+# Update the console's Host allow-list to the new domain (edit while down)
+ynh_app_setting_set --key=console_allowed_hosts --value="localhost,127.0.0.1,[::1],$domain"
+docker stop "$app" >/dev/null 2>&1 || true
+docker run --rm -v "${app}-data:/d" alpine:latest sh -c "
+    line='routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain'
+    if grep -q '^routerconsole.allowedHosts=' /d/router.config 2>/dev/null; then
+        sed -i \"s|^routerconsole.allowedHosts=.*|\$line|\" /d/router.config
+    else
+        echo \"\$line\" >> /d/router.config
+    fi"
+systemctl restart "$app"
+
+ynh_script_progression "Done. Console: https://$domain$path (SSO-gated)."

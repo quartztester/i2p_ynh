@@ -1,0 +1,88 @@
+#!/bin/bash
+source /usr/share/yunohost/helpers
+
+ynh_abort_if_errors
+
+ext_port="${ext_port:-51427}"
+jvm_xmx="${jvm_xmx:-512m}"
+
+if ! systemctl is-active --quiet docker; then
+    ynh_die --message="The docker service is not running. Install/enable docker first (apt install docker.io docker-compose-v2)."
+fi
+
+#=================================================
+# FIREWALL (external I2NP port, TCP+UDP)
+#=================================================
+ynh_script_progression "Opening firewall port $ext_port (TCP+UDP)..."
+yunohost firewall allow Both "$ext_port"
+
+#=================================================
+# INSTALL FILES
+#=================================================
+ynh_script_progression "Writing compose config (EXT_PORT=$ext_port, JVM_XMX=$jvm_xmx)..."
+ynh_config_add --template="docker-compose.yml" --destination="$install_dir/docker-compose.yml"
+
+ynh_script_progression "Pulling I2P image (large: JVM + router, may take a few minutes)..."
+docker compose -f "$install_dir/docker-compose.yml" pull
+
+ynh_script_progression "Configuring systemd service..."
+ynh_config_add_systemd
+ynh_systemctl --service="$app" --action=start --log_path=systemd --timeout=300
+
+#=================================================
+# FIRST BOOT MUST FINISH BEFORE ANY CONFIG EDIT.
+# The image splits its clients.config into <vol>/clients.config.d/ during the
+# first boot; that's what enables the router console. Stopping the container
+# mid-boot (the old blind sleep+stop) leaves a volume with no console at all:
+# the router logs "we are just a router" forever and nginx has no backend.
+# Wait for clients.config.d to appear (or the console port to answer).
+#=================================================
+ynh_script_progression "Waiting for the router's first boot to complete (this seeds the console config)..."
+waited=0
+while [ "$waited" -lt 300 ]; do
+    if docker exec "$app" sh -c 'test -d /i2p/.i2p/clients.config.d' >/dev/null 2>&1; then
+        break
+    fi
+    sleep 5
+    waited=$((waited + 5))
+done
+if [ "$waited" -ge 300 ]; then
+    ynh_die --message="First boot did not complete within 300s (no clients.config.d in the data volume). Check: docker logs $app"
+fi
+# Let the split settle + console come up once
+sleep 5
+
+ynh_script_progression "Configuring nginx (SSO-gated router console)..."
+ynh_config_add_nginx
+
+# Tile logo for the SSO portal (supported override for non-catalog apps)
+if [ -f "$YNH_APP_BASEDIR/conf/i2p.png" ]; then
+    cp "$YNH_APP_BASEDIR/conf/i2p.png" "/usr/share/yunohost/applogos/$app.png"
+    yunohost user permission update "$app.main" --logo "/usr/share/yunohost/applogos/$app.png" || true
+fi
+
+#=================================================
+# CONSOLE: allow the public hostname (Host-header check).
+# Must be edited while the router is DOWN: it persists router.config on
+# shutdown and would clobber a live edit.
+#=================================================
+ynh_script_progression "Allowing $domain in the router console's allowedHosts..."
+ynh_app_setting_set --key=console_allowed_hosts --value="localhost,127.0.0.1,[::1],$domain"
+docker stop "$app" >/dev/null 2>&1 || true
+docker run --rm -v "${app}-data:/d" alpine:latest sh -c "
+    line='routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain'
+    if grep -q '^routerconsole.allowedHosts=' /d/router.config 2>/dev/null; then
+        sed -i \"s|^routerconsole.allowedHosts=.*|\$line|\" /d/router.config
+    else
+        echo \"\$line\" >> /d/router.config
+    fi"
+systemctl restart "$app"
+
+sleep 30
+if docker ps --format '{{.Names}}' | grep -qx "$app"; then
+    ynh_print_warn "Console: https://$domain$path (SSO-gated). Loopback: http://127.0.0.1:7657"
+else
+    ynh_print_warn "Container not visible yet — check: docker logs $app"
+fi
+
+ynh_script_progression "I2P router installed. IMPORTANT: forward TCP $ext_port AND UDP $ext_port on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing."

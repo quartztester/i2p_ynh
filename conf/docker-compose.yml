@@ -1,0 +1,29 @@
+services:
+  i2p:
+    image: geti2p/i2p:latest
+    container_name: __APP__
+    restart: unless-stopped
+    environment:
+      - EXT_PORT=__EXT_PORT__
+      - JVM_XMX=__JVM_XMX__
+    ports:
+      # External I2NP: one port, both transports (NTCP2 tcp / SSU2 udp)
+      - "__EXT_PORT__:__EXT_PORT__"
+      - "__EXT_PORT__:__EXT_PORT__/udp"
+      # Everything sensitive stays loopback-only on the host:
+      #   router console (host side = $port), 4444/4445 proxy, I2CP, SAM.
+      # Console host port comes from the port resource in case 7657 is taken.
+      - "127.0.0.1:__PORT__:7657"
+    volumes:
+      # Router identity + config. Losing this = losing your router hash.
+      - i2p-data:/i2p/.i2p
+    mem_limit: 800m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  i2p-data:
+    name: __APP__-data
