@@ -1,13 +1,13 @@
 #!/bin/bash
 source /usr/share/yunohost/helpers
 
-ynh_print_info "Backing up I2P router identity and config (volume ${app}-data)..."
-# Tar the named volume so the router hash/identity survives a restore.
+ynh_print_info "Declaring files to be backed up..."
+# The whole router data dir (identity, netDB, config) is archived.
 # NB: helpers v2.1 runs collect scripts with cwd = staging dir and NO
-# $BACKUP_DIR — write the archive as a relative path.
-if docker volume inspect "${app}-data" >/dev/null 2>&1; then
-    docker run --rm -v "${app}-data:/data:ro" alpine:latest \
-        tar -czf - -C /data . > "${app}-data.tar.gz"
-fi
-ynh_backup "$install_dir/docker-compose.yml"
+# $BACKUP_DIR — ynh_backup handles relative staging.
+ynh_backup "$data_dir"
 ynh_backup "/etc/systemd/system/$app.service"
+# NB: the apt repo files created during install are transient by design
+# (ynh_apt_install_dependencies_from_extra_repository removes them after
+# installing), so there is nothing apt-related to archive — restore
+# reinstalls the package from the repo when missing.

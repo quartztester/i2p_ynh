@@ -1,13 +1,8 @@
 #!/bin/bash
 source /usr/share/yunohost/helpers
 
-ynh_script_progression "Stopping I2P container and removing its data volume..."
-if [ -f "$install_dir/docker-compose.yml" ]; then
-    docker compose -f "$install_dir/docker-compose.yml" down -v --remove-orphans || true
-fi
-# Fallbacks in case the compose file was already gone
-docker rm -f "$app" 2>/dev/null || true
-docker volume rm "$app-data" 2>/dev/null || true
+ynh_script_progression "Stopping I2P router..."
+systemctl stop "$app" 2>/dev/null || true
 
 ynh_script_progression "Removing nginx, logo and systemd unit..."
 ynh_config_remove_nginx
@@ -15,10 +10,20 @@ ynh_config_remove_systemd
 systemctl daemon-reload
 ynh_safe_rm "/usr/share/yunohost/applogos/$app.png"
 
+ynh_script_progression "Removing router data dir..."
+ynh_safe_rm "$data_dir"
+ynh_safe_rm "/var/lib/$app"
+
+# Purge the apt package + repository this app installed. Guarded so a
+# cleanup hiccup never blocks app removal; if another i2p install shares
+# the package on this box, the admin can reinstall it afterwards.
+ynh_script_progression "Purging i2p-router package and apt repository..."
+apt-get purge -y -q i2p-router >/dev/null 2>&1 || true
+ynh_safe_rm "/etc/apt/sources.list.d/$app.list"
+ynh_safe_rm "/etc/apt/trusted.gpg.d/$app.gpg"
+
 ext_port=$(yunohost app setting "$app" ext_port 2>/dev/null || echo "51427")
 ynh_script_progression "Closing firewall port $ext_port..."
 # NB: 'disallow Both' crashes YH12.1 (moulinette lowercases -> ValueError), do TCP+UDP separately
 yunohost firewall disallow TCP "$ext_port" || true
 yunohost firewall disallow UDP "$ext_port" || true
-
-ynh_safe_rm "$install_dir/docker-compose.yml"

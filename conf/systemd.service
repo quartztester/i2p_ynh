@@ -1,29 +1,32 @@
 [Unit]
 Description=I2P router (app: __APP__)
-Documentation=https://github.com/i2p/i2p.i2p/blob/master/Docker.md
-After=docker.service
-Requires=docker.service
+Documentation=https://geti2p.net/en/get-i2p-on-debian-and-ubuntu
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=__INSTALL_DIR__
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-TimeoutStartSec=300
+Type=simple
+User=__APP__
+Group=__APP__
+WorkingDirectory=/usr/share/i2p
+# Direct RouterLaunch exec: the distro launcher script (i2prouter-nowrapper)
+# daemonizes with nohup and exits immediately, which systemd cannot supervise.
+# Flags mirror what upstream's own launcher and official container produce.
+ExecStart=/usr/bin/java -cp .:lib/* -Djava.net.preferIPv4Stack=false -Djava.library.path=/usr/share/i2p:/usr/share/i2p/lib -Di2p.dir.base=/usr/share/i2p -Di2p.dir.config=__DATA_DIR__ -DloggerFilenameOverride=logs/log-router-@.txt -Xmx__JVM_XMX__ --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/sun.nio.fs=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED net.i2p.router.RouterLaunch
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=90
 
-
-### Sandboxing baseline for a docker-CLI wrapper unit.
-### NB: no User= here on purpose — this unit only talks to the docker socket,
-### which YunoHost admins reach as root/docker-group; running the CLI as the
-### unprivileged app user would break container management. The container
-### itself drops privileges internally.
+### Sandboxing baseline (see example_ynh). ProtectSystem=full is kept, but
+### the router writes rotating logs under /usr/share/i2p/logs (upstream's
+### own layout), so that one path is explicitly re-opened for the app user
+### via ReadWritePaths; the router still runs unprivileged.
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
+ReadWritePaths=/usr/share/i2p
 ProtectControlGroups=yes
 ProtectKernelTunables=yes
-ProtectHome=yes
 RestrictRealtime=yes
 LockPersonality=yes
 SystemCallArchitectures=native

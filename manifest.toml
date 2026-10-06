@@ -4,7 +4,7 @@ id = "i2p"
 name = "I2P router"
 description.en = "Volunteer relay strengthening the I2P anonymous network (console on an SSO-gated panel)"
 
-version = "2.13.0~ynh2"
+version = "2.13.1~ynh1"
 
 maintainers = []
 
@@ -12,7 +12,7 @@ maintainers = []
 license = "Public-Domain"
 website = "https://geti2p.net"
 code = "https://github.com/i2p/i2p.i2p"
-admindoc = "https://github.com/i2p/i2p.i2p/blob/master/Docker.md"
+admindoc = "https://geti2p.net/en/get-i2p-on-debian-and-ubuntu"
 
 [integration]
 yunohost = ">= 12.0"
@@ -22,7 +22,7 @@ multi_instance = false
 ldap = "not_relevant"
 sso = "not_relevant"
 disk = "1G"
-ram.build = "10M"
+ram.build = "50M"
 ram.runtime = "900M"
 
 [install]
@@ -44,15 +44,19 @@ ram.runtime = "900M"
     default = 51427
 
     [install.jvm_xmx]
-    ask.en = "Java heap limit (e.g. 512m)"
-    help.en = "I2P is a Java app. 512m is fine for a relay on a small VPS."
+    ask.en = "Java heap limit (e.g. 768m)"
+    help.en = "I2P is a Java app. 768m suits a relay; a floodfill router wants 1g or more."
     type = "string"
-    default = "512m"
+    default = "768m"
 
 [resources]
     [resources.system_user]
 
     [resources.install_dir]
+
+    # Router identity, netDB and config — the crown jewels. Backed up and
+    # restored with the app by convention.
+    [resources.data_dir]
 
     [resources.permissions]
         main.url = "/"
@@ -62,5 +66,5 @@ ram.runtime = "900M"
 
     [resources.ports]
     main.default = 7657
-    # Console port is loopback-bound by docker; no firewall exposure
+    # Console port is loopback-bound by the router; no firewall exposure.
     main.exposure = "none"

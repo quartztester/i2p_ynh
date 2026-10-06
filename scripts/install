@@ -1,17 +1,27 @@
 #!/bin/bash
 source /usr/share/yunohost/helpers
 
-
 if [ "${path:-/}" != "/" ]; then
     ynh_die --message="The I2P console uses absolute URLs and only works at the root of a domain — pick a (sub)domain with path '/'."
 fi
 
 ext_port="${ext_port:-51427}"
-jvm_xmx="${jvm_xmx:-512m}"
+jvm_xmx="${jvm_xmx:-768m}"
 
-if ! systemctl is-active --quiet docker; then
-    ynh_die --message="The docker service is not running. Install/enable docker first (apt install docker.io docker-compose-v2)."
-fi
+#=================================================
+# I2P FROM ITS OFFICIAL DEBIAN REPOSITORY
+# Debian's own i2p package was removed upstream; deb.i2p.net is the
+# sanctioned distribution. Key: I2P Debian Package Repository
+# 7840E7610F28B904753549D767ECE5605BCF1346. NB: use the Ubuntu keyserver
+# copy — the project's own key URL is intermittently an HTML 404 page,
+# and keys.openpgp.org serves a STALE revision (pre-renewal, expired
+# signing subkey); keys.keyserver.ubuntu.com serves the renewed key.
+#=================================================
+ynh_script_progression "Installing i2p-router from the official I2P apt repository..."
+ynh_apt_install_dependencies_from_extra_repository \
+    --repo="http://deb.i2p.net/ stable main" \
+    --package="i2p-router" \
+    --key="http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x67ECE5605BCF1346"
 
 #=================================================
 # FIREWALL (external I2NP port, TCP+UDP)
@@ -20,13 +30,30 @@ ynh_script_progression "Opening firewall port $ext_port (TCP+UDP)..."
 yunohost firewall allow Both "$ext_port"
 
 #=================================================
-# INSTALL FILES
+# SEED CONFIG (BEFORE FIRST BOOT)
+# router.updateDisabled: on a native install, updates come from apt —
+# the router must not replace its own dpkg-managed files over the network.
+# clients.config: seeding router.config makes the router treat this as a
+# provisioned (not brand-new) install, so it will NOT copy the distro's
+# default client apps. We therefore seed a relay-only console client here
+# (loopback-bound, console on $port). The router splits this into
+# clients.config.d/ during first boot.
 #=================================================
-ynh_script_progression "Writing compose config (EXT_PORT=$ext_port, JVM_XMX=$jvm_xmx)..."
-ynh_config_add --template="docker-compose.yml" --destination="$install_dir/docker-compose.yml"
-
-ynh_script_progression "Pulling I2P image (large: JVM + router, may take a few minutes)..."
-docker compose -f "$install_dir/docker-compose.yml" pull
+ynh_script_progression "Seeding router config (peer port $ext_port, relay-only console on $port)..."
+cat > "$data_dir/router.config" <<EOF
+router.updateDisabled=true
+i2np.ntcp.port=$ext_port
+i2np.udp.port=$ext_port
+i2np.udp.internalPort=$ext_port
+EOF
+cat > "$data_dir/clients.config" <<EOF
+clientApp.0.args=$port 127.0.0.1 ./webapps/
+clientApp.0.main=net.i2p.router.web.RouterConsoleRunner
+clientApp.0.name=I2P Router Console
+clientApp.0.startOnLoad=true
+EOF
+echo "routerconsole.welcomeWizardComplete=true" >> "$data_dir/router.config"
+chown -R "$app:$app" "$data_dir"
 
 ynh_script_progression "Configuring systemd service..."
 ynh_config_add_systemd
@@ -34,25 +61,22 @@ ynh_systemctl --service="$app" --action=start --log_path=systemd --timeout=300
 
 #=================================================
 # FIRST BOOT MUST FINISH BEFORE ANY CONFIG EDIT.
-# The image splits its clients.config into <vol>/clients.config.d/ during the
-# first boot; that's what enables the router console. Stopping the container
-# mid-boot (the old blind sleep+stop) leaves a volume with no console at all:
-# the router logs "we are just a router" forever and nginx has no backend.
-# Wait for clients.config.d to appear (or the console port to answer).
+# The router splits clients.config into clients.config.d/ during first
+# boot; that is what enables the console. Hand-editing router.config
+# mid-first-boot gets clobbered (or clobbers the seeding).
 #=================================================
-ynh_script_progression "Waiting for the router's first boot to complete (this seeds the console config)..."
+ynh_script_progression "Waiting for the router's first boot to complete..."
 waited=0
 while [ "$waited" -lt 300 ]; do
-    if docker exec "$app" sh -c 'test -d /i2p/.i2p/clients.config.d' >/dev/null 2>&1; then
+    if [ -d "$data_dir/clients.config.d" ] || curl -fsS -o /dev/null -m 3 "http://127.0.0.1:$port/"; then
         break
     fi
     sleep 5
     waited=$((waited + 5))
 done
 if [ "$waited" -ge 300 ]; then
-    ynh_die --message="First boot did not complete within 300s (no clients.config.d in the data volume). Check: docker logs $app"
+    ynh_die --message="First boot did not complete within 300s (no clients.config.d in $data_dir). Check: journalctl -u $app"
 fi
-# Let the split settle + console come up once
 sleep 5
 
 ynh_script_progression "Configuring nginx (SSO-gated router console)..."
@@ -71,21 +95,27 @@ fi
 #=================================================
 ynh_script_progression "Allowing $domain in the router console's allowedHosts..."
 ynh_app_setting_set --key=console_allowed_hosts --value="localhost,127.0.0.1,[::1],$domain"
-docker stop "$app" >/dev/null 2>&1 || true
-docker run --rm -v "${app}-data:/d" alpine:latest sh -c "
-    line='routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain'
-    if grep -q '^routerconsole.allowedHosts=' /d/router.config 2>/dev/null; then
-        sed -i \"s|^routerconsole.allowedHosts=.*|\$line|\" /d/router.config
-    else
-        echo \"\$line\" >> /d/router.config
-    fi"
+systemctl stop "$app"
+sed -i "s|^routerconsole.allowedHosts=.*|# removed|" "$data_dir/router.config"
+echo "routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain" >> "$data_dir/router.config"
+chown "$app:$app" "$data_dir/router.config"
+# 'restart' rather than 'start': always land on a known state.
 systemctl restart "$app"
 
-sleep 30
-if docker ps --format '{{.Names}}' | grep -qx "$app"; then
+# Jetty/console takes well over a minute after the cold restart; poll
+# instead of a fixed sleep so slow hardware doesn't get a false alarm.
+ready=0
+for i in $(seq 1 24); do
+    if curl -fsS -o /dev/null -m 5 "http://127.0.0.1:$port/"; then
+        ready=1
+        break
+    fi
+    sleep 10
+done
+if [ "$ready" -eq 1 ]; then
     ynh_print_warn "Console: https://$domain$path (SSO-gated). Loopback: http://127.0.0.1:$port"
 else
-    ynh_print_warn "Container not visible yet — check: docker logs $app"
+    ynh_print_warn "Console not answering after ~4 min — check: journalctl -u $app"
 fi
 
-ynh_script_progression "I2P router installed. IMPORTANT: forward TCP $ext_port AND UDP $ext_port on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing."
+ynh_script_progression "IMPORTANT: forward TCP $ext_port AND UDP $ext_port on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing. Router data dir: $data_dir"
