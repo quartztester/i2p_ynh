@@ -16,21 +16,42 @@ ExecStart=/usr/bin/java -cp .:lib/* -Djava.net.preferIPv4Stack=false -Djava.libr
 Restart=on-failure
 RestartSec=10
 TimeoutStopSec=90
+# The JVM catches SIGTERM on stop and exits 143; treat that as clean shutdown.
+SuccessExitStatus=143
 
-### Sandboxing baseline (see example_ynh). ProtectSystem=full is kept, but
-### the router writes rotating logs under /usr/share/i2p/logs (upstream's
-### own layout), so that one path is explicitly re-opened for the app user
-### via ReadWritePaths; the router still runs unprivileged.
+### Sandboxing baseline from example_ynh. One deviation: the router writes
+### rotating logs under /usr/share/i2p/logs (upstream's own layout), so that
+### path is re-opened for the app user via ReadWritePaths despite
+### ProtectSystem=full; the router still runs unprivileged.
 NoNewPrivileges=yes
 PrivateTmp=yes
+PrivateDevices=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+RestrictRealtime=yes
+DevicePolicy=closed
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
 ProtectSystem=full
 ReadWritePaths=/usr/share/i2p
 ProtectControlGroups=yes
+ProtectKernelModules=yes
 ProtectKernelTunables=yes
-RestrictRealtime=yes
 LockPersonality=yes
 SystemCallArchitectures=native
-CapabilityBoundingSet=~CAP_SYS_BOOT CAP_SYS_MODULE CAP_SYS_PACCT
+SystemCallFilter=@system-service
+SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @setuid @swap @cpu-emulation @privileged
+
+# Denying access to capabilities that should not be relevant (see example_ynh)
+CapabilityBoundingSet=~CAP_RAWIO CAP_MKNOD
+CapabilityBoundingSet=~CAP_AUDIT_CONTROL CAP_AUDIT_READ CAP_AUDIT_WRITE
+CapabilityBoundingSet=~CAP_SYS_BOOT CAP_SYS_TIME CAP_SYS_MODULE CAP_SYS_PACCT
+CapabilityBoundingSet=~CAP_LEASE CAP_LINUX_IMMUTABLE CAP_IPC_LOCK
+CapabilityBoundingSet=~CAP_BLOCK_SUSPEND CAP_WAKE_ALARM
+CapabilityBoundingSet=~CAP_SYS_TTY_CONFIG
+CapabilityBoundingSet=~CAP_MAC_ADMIN CAP_MAC_OVERRIDE
+CapabilityBoundingSet=~CAP_SYS_ADMIN CAP_SYS_PTRACE CAP_SYSLOG
 
 [Install]
 WantedBy=multi-user.target

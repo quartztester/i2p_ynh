@@ -4,7 +4,7 @@ id = "i2p"
 name = "I2P router"
 description.en = "Volunteer relay strengthening the I2P anonymous network"
 
-version = "2.13.1~ynh1"
+version = "2.13.1~ynh2"
 
 maintainers = []
 
