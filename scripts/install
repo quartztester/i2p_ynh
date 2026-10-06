@@ -5,7 +5,6 @@ if [ "${path:-/}" != "/" ]; then
     ynh_die --message="The I2P console uses absolute URLs and only works at the root of a domain — pick a (sub)domain with path '/'."
 fi
 
-ext_port="${ext_port:-51427}"
 jvm_xmx="${jvm_xmx:-768m}"
 
 #=================================================
@@ -24,27 +23,25 @@ ynh_apt_install_dependencies_from_extra_repository \
     --key="http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x67ECE5605BCF1346"
 
 #=================================================
-# FIREWALL (external I2NP port, TCP+UDP)
-#=================================================
-ynh_script_progression "Opening firewall port $ext_port (TCP+UDP)..."
-yunohost firewall allow Both "$ext_port"
-
-#=================================================
 # SEED CONFIG (BEFORE FIRST BOOT)
 # router.updateDisabled: on a native install, updates come from apt —
 # the router must not replace its own dpkg-managed files over the network.
+# router.floodfillParticipant: the point of this package is to volunteer
+# capacity to the network; a floodfill answers distributed-database
+# queries for everyone. Console: Config -> Router manager to turn off.
 # clients.config: seeding router.config makes the router treat this as a
 # provisioned (not brand-new) install, so it will NOT copy the distro's
 # default client apps. We therefore seed a relay-only console client here
 # (loopback-bound, console on $port). The router splits this into
 # clients.config.d/ during first boot.
 #=================================================
-ynh_script_progression "Seeding router config (peer port $ext_port, relay-only console on $port)..."
+ynh_script_progression "Seeding router config (peer port $port_ext, floodfill relay, console on $port)..."
 cat > "$data_dir/router.config" <<EOF
 router.updateDisabled=true
-i2np.ntcp.port=$ext_port
-i2np.udp.port=$ext_port
-i2np.udp.internalPort=$ext_port
+router.floodfillParticipant=true
+i2np.ntcp.port=$port_ext
+i2np.udp.port=$port_ext
+i2np.udp.internalPort=$port_ext
 EOF
 cat > "$data_dir/clients.config" <<EOF
 clientApp.0.args=$port 127.0.0.1 ./webapps/
@@ -118,4 +115,4 @@ else
     ynh_print_warn "Console not answering after ~4 min — check: journalctl -u $app"
 fi
 
-ynh_script_progression "IMPORTANT: forward TCP $ext_port AND UDP $ext_port on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing. Router data dir: $data_dir"
+ynh_script_progression "IMPORTANT: forward TCP $port_ext AND UDP $port_ext on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing. Router data dir: $data_dir"

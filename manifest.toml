@@ -2,14 +2,14 @@ packaging_format = 2
 
 id = "i2p"
 name = "I2P router"
-description.en = "Volunteer relay strengthening the I2P anonymous network (console on an SSO-gated panel)"
+description.en = "Volunteer relay strengthening the I2P anonymous network"
 
 version = "2.13.1~ynh1"
 
 maintainers = []
 
 [upstream]
-license = "Public-Domain"
+license = "Unlicense"
 website = "https://geti2p.net"
 code = "https://github.com/i2p/i2p.i2p"
 admindoc = "https://geti2p.net/en/get-i2p-on-debian-and-ubuntu"
@@ -37,12 +37,6 @@ ram.runtime = "900M"
     type = "group"
     default = "all_users"
 
-    [install.ext_port]
-    ask.en = "External I2NP port (TCP+UDP) to forward on your router"
-    help.en = "One port serves both transports (NTCP2=TCP, SSU2=UDP). Forward the SAME port as TCP and UDP on your router to this server, or the router stays 'Firewalled' and relays little."
-    type = "number"
-    default = 51427
-
     [install.jvm_xmx]
     ask.en = "Java heap limit (e.g. 768m)"
     help.en = "I2P is a Java app. 768m suits a relay; a floodfill router wants 1g or more."
@@ -52,10 +46,9 @@ ram.runtime = "900M"
 [resources]
     [resources.system_user]
 
-    [resources.install_dir]
-
     # Router identity, netDB and config — the crown jewels. Backed up and
-    # restored with the app by convention.
+    # restored with the app by convention. NB: no install_dir resource; the
+    # app lives entirely in the apt prefix + data_dir.
     [resources.data_dir]
 
     [resources.permissions]
@@ -65,6 +58,12 @@ ram.runtime = "900M"
         main.auth_header = false
 
     [resources.ports]
+    # Console port: bound to loopback by the router, never firewalled open.
     main.default = 7657
-    # Console port is loopback-bound by the router; no firewall exposure.
-    main.exposure = "none"
+    # I2NP peer port: one port for both transports (NTCP2=TCP, SSU2=UDP).
+    # Fixed so admins can set up a stable router port-forward; the firewall
+    # open/close is handled by this resource (setting: $port_ext).
+    # NB: named "ext" so the legacy 'ext_port' setting auto-migrates.
+    ext.default = 51427
+    ext.exposed = "Both"
+    ext.fixed = true

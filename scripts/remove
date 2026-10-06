@@ -22,8 +22,4 @@ apt-get purge -y -q i2p-router >/dev/null 2>&1 || true
 ynh_safe_rm "/etc/apt/sources.list.d/$app.list"
 ynh_safe_rm "/etc/apt/trusted.gpg.d/$app.gpg"
 
-ext_port=$(yunohost app setting "$app" ext_port 2>/dev/null || echo "51427")
-ynh_script_progression "Closing firewall port $ext_port..."
-# NB: 'disallow Both' crashes YH12.1 (moulinette lowercases -> ValueError), do TCP+UDP separately
-yunohost firewall disallow TCP "$ext_port" || true
-yunohost firewall disallow UDP "$ext_port" || true
+# (the ext_port firewall rules are closed by the ports resource deprovision)

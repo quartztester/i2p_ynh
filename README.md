@@ -8,7 +8,9 @@ It shall NOT be edited by hand.
   I2P router, packaged for YunoHost
 </h1>
 
-Volunteer relay strengthening the I2P anonymous network (console on an SSO-gated panel)
+Volunteer relay strengthening the I2P anonymous network
+
+By default the router registers as a **floodfill** (it answers the network's distributed database queries for everyone) — the main way to contribute capacity to I2P. Disable it in the router console (Config → Router manager) if you only want a plain relay. Forward the peer port (default 51427) as **TCP and UDP** on your router so the router reaches "OK" instead of "Firewalled".
 
 [![🌐 Official app website](https://img.shields.io/badge/Official_app_website-darkgreen?style=for-the-badge)](https://geti2p.net)
 [![Version: 2.13.1~ynh1](https://img.shields.io/badge/Version-2.13.1~ynh1-rgb(18,138,11)?style=for-the-badge)](https://ci-apps.yunohost.org/ci/apps/i2p/)
