@@ -24,8 +24,11 @@ visitors; the router only forwards other users' traffic, as every I2P node does.
 
 ## Install
 
+Webadmin: Settings → Applications → Install a custom app → paste this repo URL.
+CLI:
+
 ```bash
-yunohost app install https://path/to/this/repo \
+yunohost app install https://github.com/quartztester/i2p_ynh \
   -a "domain=i2p.example.com&path=/&ext_port=51427&jvm_xmx=512m"
 ```
 
@@ -43,3 +46,7 @@ is managed automatically on install/upgrade/`change-url`.
 - Router identity lives in the `i2p-data` docker volume — losing it means a new
   router hash.
 - `yunohost app change-url i2p -d new.example.com` is supported (root path only).
+
+## License
+
+Package scripts: GPL-3.0. Upstream I2P: https://geti2p.net (its own terms).
