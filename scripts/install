@@ -84,7 +84,7 @@ systemctl restart "$app"
 
 sleep 30
 if docker ps --format '{{.Names}}' | grep -qx "$app"; then
-    ynh_print_warn "Console: https://$domain$path (SSO-gated). Loopback: http://127.0.0.1:7657"
+    ynh_print_warn "Console: https://$domain$path (SSO-gated). Loopback: http://127.0.0.1:$port"
 else
     ynh_print_warn "Container not visible yet — check: docker logs $app"
 fi
