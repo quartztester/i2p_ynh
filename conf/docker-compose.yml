@@ -17,7 +17,10 @@ services:
     volumes:
       # Router identity + config. Losing this = losing your router hash.
       - i2p-data:/i2p/.i2p
-    mem_limit: 800m
+    # Floodfill promotion holds the full netDB; the router warns at >8 MiBps
+    # share bandwidth that it wants >=563MB heap. 2g leaves comfortable headroom.
+    mem_limit: 2g
+    memswap_limit: 4g
     logging:
       driver: json-file
       options:

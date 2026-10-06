@@ -1,7 +1,6 @@
 #!/bin/bash
 source /usr/share/yunohost/helpers
 
-ynh_abort_if_errors
 
 if [ "${path:-/}" != "/" ]; then
     ynh_die --message="The I2P console uses absolute URLs and only works at the root of a domain — pick a (sub)domain with path '/'."
@@ -60,8 +59,8 @@ ynh_script_progression "Configuring nginx (SSO-gated router console)..."
 ynh_config_add_nginx
 
 # Tile logo for the SSO portal (supported override for non-catalog apps)
-if [ -f "$YNH_APP_BASEDIR/conf/i2p.png" ]; then
-    cp "$YNH_APP_BASEDIR/conf/i2p.png" "/usr/share/yunohost/applogos/$app.png"
+if [ -f "$YNH_APP_BASEDIR/doc/i2p.png" ]; then
+    cp "$YNH_APP_BASEDIR/doc/i2p.png" "/usr/share/yunohost/applogos/$app.png"
     yunohost user permission update "$app.main" --logo "/usr/share/yunohost/applogos/$app.png" || true
 fi
 
