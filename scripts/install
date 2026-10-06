@@ -3,6 +3,10 @@ source /usr/share/yunohost/helpers
 
 ynh_abort_if_errors
 
+if [ "${path:-/}" != "/" ]; then
+    ynh_die --message="The I2P console uses absolute URLs and only works at the root of a domain — pick a (sub)domain with path '/'."
+fi
+
 ext_port="${ext_port:-51427}"
 jvm_xmx="${jvm_xmx:-512m}"
 
