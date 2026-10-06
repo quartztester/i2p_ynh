@@ -24,7 +24,7 @@ SuccessExitStatus=143
 ### path is re-opened for the app user via ReadWritePaths despite
 ### ProtectSystem=full; the router still runs unprivileged.
 NoNewPrivileges=yes
-PrivateTmp=yes
+ PrivateTmp=yes
 PrivateDevices=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 RestrictNamespaces=yes
@@ -36,15 +36,15 @@ ProtectProc=invisible
 ProtectSystem=full
 ReadWritePaths=/usr/share/i2p
 ProtectControlGroups=yes
-ProtectKernelModules=yes
+ ProtectKernelModules=yes
 ProtectKernelTunables=yes
 LockPersonality=yes
 SystemCallArchitectures=native
-SystemCallFilter=@system-service
+ SystemCallFilter=@system-service
 SystemCallFilter=~@clock @debug @module @mount @obsolete @reboot @setuid @swap @cpu-emulation @privileged
 
 # Denying access to capabilities that should not be relevant (see example_ynh)
-CapabilityBoundingSet=~CAP_RAWIO CAP_MKNOD
+ CapabilityBoundingSet=~CAP_RAWIO CAP_MKNOD
 CapabilityBoundingSet=~CAP_AUDIT_CONTROL CAP_AUDIT_READ CAP_AUDIT_WRITE
 CapabilityBoundingSet=~CAP_SYS_BOOT CAP_SYS_TIME CAP_SYS_MODULE CAP_SYS_PACCT
 CapabilityBoundingSet=~CAP_LEASE CAP_LINUX_IMMUTABLE CAP_IPC_LOCK
