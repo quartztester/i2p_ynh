@@ -14,7 +14,7 @@ door — arriving through the portal, the console needs no second login.
 
 | Purpose | Port | Notes |
 |---|---|---|
-| Peer transport | `__port_ext__` (TCP **and** UDP) | Must be port-forwarded on your router, or the console reports *Firewalled* and the relay contributes far less. |
+| Peer transport | `__PORT_EXT__` (TCP **and** UDP) | Must be port-forwarded on your router, or the console reports *Firewalled* and the relay contributes far less. |
 | Console | loopback only | Never directly exposed; reachable exclusively through the SSO-gated nginx proxy. |
 
 ## Routine settings (inside the console)
@@ -42,7 +42,7 @@ router identity and its accumulated reputation.
 
 | Symptom | Cause & fix |
 |---|---|
-| Console shows **Firewalled** | Peer port `__port_ext__` (TCP+UDP) is missing a router port-forward, or the domain's DNS record is Cloudflare-proxied (must be DNS-only for raw ports). |
+| Console shows **Firewalled** | Peer port `__PORT_EXT__` (TCP+UDP) is missing a router port-forward, or the domain's DNS record is Cloudflare-proxied (must be DNS-only for raw ports). |
 | I2PSnark (torrent UI) reports *"Configured i2psnark directory ... does not exist"* | Its per-app config holds a stale absolute path. The correct value is relative: `i2psnark.dir=i2psnark` in `i2psnark.config.d/i2psnark.config` inside the data dir. Restart the router after editing. |
 | Router slow after boot | Normal on first boot: it performs a large netDB re-check; watch `journalctl -u __APP__`. |
 | Router not running | `systemctl status __APP__`; the unit restarts itself on failure (exit 143 on stop is a clean JVM shutdown, not an error). |

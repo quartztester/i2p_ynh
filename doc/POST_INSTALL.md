@@ -4,12 +4,12 @@ I2P is installed and running. This page summarizes what to check first.
 
 ## Access the console
 
-**https://`__domain__`/** — gated behind YunoHost's SSO, so only users of your
+**https://`__DOMAIN__`/** — gated behind YunoHost's SSO, so only users of your
 portal can reach it. No second login is required when arriving through the portal.
 
 ## Required next step: open the peer port
 
-For the router to act as a useful relay, forward port **`__port_ext__` (TCP *and*
+For the router to act as a useful relay, forward port **`__PORT_EXT__` (TCP *and*
 UDP)** on your internet box/router to this server.
 
 Verify in the console's **status page**:
