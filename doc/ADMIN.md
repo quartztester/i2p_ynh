@@ -32,6 +32,10 @@ The router's **own software updater is deliberately disabled**: updates arrive f
 the I2P apt repository via `yunohost app upgrade i2p`. Do not use the console's
 "update now" — it would overwrite dpkg-managed files and break the package.
 
+Want this automated? An opt-in weekly watchdog script ships with the package:
+see `scripts/contrib/README.md` (checks the repo, upgrades only when a newer
+release exists, logs to `/var/log/i2p-auto-update.log`).
+
 ## Data & identity
 
 Router identity (keys, netDB, configuration) lives in the app data dir and is
