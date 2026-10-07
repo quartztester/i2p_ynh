@@ -46,3 +46,4 @@ router identity and its accumulated reputation.
 | I2PSnark (torrent UI) reports *"Configured i2psnark directory ... does not exist"* | Its per-app config holds a stale absolute path. The correct value is relative: `i2psnark.dir=i2psnark` in `i2psnark.config.d/i2psnark.config` inside the data dir. Restart the router after editing. |
 | Router slow after boot | Normal on first boot: it performs a large netDB re-check; watch `journalctl -u __APP__`. |
 | Router not running | `systemctl status __APP__`; the unit restarts itself on failure (exit 143 on stop is a clean JVM shutdown, not an error). |
+| Admin UI "Move the app to a different URL" accepts text after the `/` | The console UI uses absolute URLs, so this app only works at the **root of a domain** — the path field is always empty by design. Moving to another domain (root) works; any path beyond `/` is rejected by the app's change-url script and nothing is moved. |
