@@ -4,7 +4,7 @@ It shall NOT be edited by hand.
 -->
 
 <h1>
-  <img src="https://raw.githubusercontent.com/YunoHost/apps/main/logos/i2p.png" width="32px" alt="Logo of I2P router">
+  <img src="doc/i2p.png" width="32px" alt="Logo of I2P router">
   I2P router, packaged for YunoHost
 </h1>
 
@@ -26,20 +26,13 @@ By default the router registers as a **floodfill** (it answers the network's dis
 
 🛠️ Upstream I2P router repository: <https://github.com/i2p/i2p.i2p>
 
-Pull request are welcome and should target the [`testing` branch](https://github.com/YunoHost-Apps/i2p_ynh/tree/testing).
-
-The `testing` branch can be tested using:
+Pull requests are welcome against the `main` branch of this fork; install the development state directly with:
 ```
 # fresh install:
-sudo yunohost app install https://github.com/YunoHost-Apps/i2p_ynh/tree/testing
+sudo yunohost app install https://github.com/quartztester/i2p_ynh
 
 # upgrade an existing install:
-sudo yunohost app upgrade i2p -u https://github.com/YunoHost-Apps/i2p_ynh/tree/testing
-```
-
-You can also switch to the testing branch to update from testing by default (as same as for APT when you chose to use a testing repos) with this command:
-```bash
-sudo yunohost app setting i2p upgrade_channel -v testing
+sudo yunohost app upgrade i2p -u https://github.com/quartztester/i2p_ynh
 ```
 
 ### 📚 App packaging documentation
