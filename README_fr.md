@@ -1,4 +1,7 @@
-# I2P pour YunoHost
+<h1>
+  <img src="logos/i2p.png" width="48" alt="I2P router logo">
+  I2P pour YunoHost
+</h1>
 
 I2P est un réseau superposé anonyme et chiffré (« eepsites », tunnels, courrier I2P, partage de fichiers). Ce paquet exécute le routeur I2P officiel en natif (Java, sans Docker), avec sa console web derrière le portail YunoHost.
 
@@ -15,3 +18,9 @@ I2P est un réseau superposé anonyme et chiffré (« eepsites », tunnels, cour
 
 - Projet amont : <https://geti2p.net>
 - Paquet YunoHost : <https://github.com/quartztester/i2p_ynh>
+
+## Screenshots
+
+![I2P router — console stats](./doc/screenshots/console-stats.png)
+![I2P router — console](./doc/screenshots/console.png)
+

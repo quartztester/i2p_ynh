@@ -4,7 +4,7 @@ It shall NOT be edited by hand.
 -->
 
 <h1>
-  <img src="doc/i2p.png" width="32px" alt="Logo of I2P router">
+  <img src="logos/i2p.png" width="32px" alt="Logo of I2P router">
   I2P router, packaged for YunoHost
 </h1>
 
@@ -13,12 +13,17 @@ Volunteer relay strengthening the I2P anonymous network
 By default the router registers as a **floodfill** (it answers the network's distributed database queries for everyone) — the main way to contribute capacity to I2P. Disable it in the router console (Config → Router manager) if you only want a plain relay. Forward the peer port (default 51427) as **TCP and UDP** on your router so the router reaches "OK" instead of "Firewalled".
 
 [![🌐 Official app website](https://img.shields.io/badge/Official_app_website-darkgreen?style=for-the-badge)](https://geti2p.net)
-![Version: 2.13.1~ynh2](https://img.shields.io/badge/Version-2.13.1~ynh2-rgb(18,138,11)?style=for-the-badge)
+![Version: 2.13.1~ynh2](https://img.shields.io/badge/Version-2.13.1~ynh2-rgb%2818,138,11%29?style=for-the-badge)
 
 <div align="center">
 <a href="https://github.com/quartztester/i2p_ynh#readme"><img height="100px" src="https://github.com/YunoHost/yunohost-artwork/raw/refs/heads/main/badges/neopossum-badges/badge_more_info_on_the_appstore.svg"/></a>
 <a href="https://github.com/quartztester/i2p_ynh/issues"><img height="100px" src="https://github.com/YunoHost/yunohost-artwork/raw/refs/heads/main/badges/neopossum-badges/badge_report_an_issue.svg"/></a>
 </div>
+
+## Screenshots
+
+![I2P router — console stats](./doc/screenshots/console-stats.png)
+![I2P router — console](./doc/screenshots/console.png)
 
 ## 📦 Developer info
 
