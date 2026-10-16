@@ -1,9 +1,23 @@
 #!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
 source /usr/share/yunohost/helpers
+
+#=================================================
+# CHECK THE INSTALL PATH
+#=================================================
 
 if [ "${path:-/}" != "/" ]; then
     ynh_die --message="The I2P console uses absolute URLs and only works at the root of a domain — pick a (sub)domain with path '/'."
 fi
+
+#=================================================
+# SETUP DEFAULTS
+#=================================================
 
 jvm_xmx="${jvm_xmx:-768m}"
 
@@ -52,6 +66,10 @@ EOF
 echo "routerconsole.welcomeWizardComplete=true" >> "$data_dir/router.config"
 chown -R "$app:$app" "$data_dir"
 
+#=================================================
+# INSTALL AND START THE SYSTEMD SERVICE
+#=================================================
+
 ynh_script_progression "Configuring systemd service..."
 ynh_config_add_systemd
 ynh_systemctl --service="$app" --action=start --log_path=systemd --timeout=300
@@ -76,6 +94,10 @@ if [ "$waited" -ge 300 ]; then
 fi
 sleep 5
 
+#=================================================
+# CONFIGURE NGINX AND SSO LOGO
+#=================================================
+
 ynh_script_progression "Configuring nginx (SSO-gated router console)..."
 ynh_config_add_nginx
 
@@ -99,6 +121,10 @@ chown "$app:$app" "$data_dir/router.config"
 # 'restart' rather than 'start': always land on a known state.
 systemctl restart "$app"
 
+#=================================================
+# WAIT FOR CONSOLE READINESS
+#=================================================
+
 # Jetty/console takes well over a minute after the cold restart; poll
 # instead of a fixed sleep so slow hardware doesn't get a false alarm.
 ready=0
@@ -114,5 +140,9 @@ if [ "$ready" -eq 1 ]; then
 else
     ynh_print_warn "Console not answering after ~4 min — check: journalctl -u $app"
 fi
+
+#=================================================
+# END OF SCRIPT
+#=================================================
 
 ynh_script_progression "IMPORTANT: forward TCP $port_ext AND UDP $port_ext on your router to this server's LAN address, or the router stays 'Firewalled' and relays almost nothing. Router data dir: $data_dir"

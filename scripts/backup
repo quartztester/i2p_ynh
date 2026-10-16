@@ -1,5 +1,16 @@
 #!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+# Keep this path for calling _common.sh inside the execution's context of backup and restore scripts
+source ../settings/scripts/_common.sh
 source /usr/share/yunohost/helpers
+
+#=================================================
+# BACKUP THE APP MAIN DIR AND SYSTEM CONFIGURATION
+#=================================================
 
 ynh_print_info "Declaring files to be backed up..."
 # The whole router data dir (identity, netDB, config) is archived.
@@ -10,4 +21,9 @@ ynh_backup "/etc/systemd/system/$app.service"
 # NB: the apt repo files created during install are transient by design
 # (ynh_apt_install_dependencies_from_extra_repository removes them after
 # installing), so there is nothing apt-related to archive — restore
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
 # reinstalls the package from the repo when missing.

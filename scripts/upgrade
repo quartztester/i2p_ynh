@@ -1,8 +1,18 @@
 #!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
 source /usr/share/yunohost/helpers
 
 # NB: $data_dir comes from the app settings (helpers export it) — do not
 # hardcode a path here.
+
+#=================================================
+# UPDATE I2P-ROUTER FROM THE OFFICIAL APT REPOSITORY
+#=================================================
 
 ynh_script_progression "Installing/updating i2p-router from the official I2P apt repository..."
 # Re-running is how upgrades work: helper re-points the apt source and
@@ -11,6 +21,10 @@ ynh_apt_install_dependencies_from_extra_repository \
     --repo="http://deb.i2p.net/ stable main" \
     --package="i2p-router" \
     --key="http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x67ECE5605BCF1346"
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATION
+#=================================================
 
 ynh_script_progression "Re-rendering systemd unit and nginx config..."
 ynh_safe_rm "/etc/systemd/system/$app.service"
@@ -26,10 +40,18 @@ if [ -f "$YNH_APP_BASEDIR/doc/i2p.png" ]; then
     yunohost user permission update "$app.main" --logo "/usr/share/yunohost/applogos/$app.png" || true
 fi
 
+#=================================================
+# KEEP UPDATES UNDER APT MANAGEMENT
+#=================================================
+
 # Keep updates under apt management even if an older install left it unset.
 systemctl stop "$app"
 grep -q "^router.updateDisabled=true" "$data_dir/router.config" 2>/dev/null \
     || echo "router.updateDisabled=true" >> "$data_dir/router.config"
+
+#=================================================
+# HEAL A BROKEN FIRST BOOT
+#=================================================
 
 # Self-heal broken first boots: if the console client config was never
 # split out (router would log "we are just a router" and run headless),
@@ -48,6 +70,10 @@ EOF
     chown -R "$app:$app" "$data_dir"
 fi
 
+#=================================================
+# RE-ASSERT CONSOLE ALLOWED HOSTS
+#=================================================
+
 # Re-assert allowedHosts (domain may have changed via change-url).
 # Edit while the router is DOWN — it persists router.config on shutdown.
 if [ -n "${domain:-}" ]; then
@@ -58,7 +84,15 @@ if [ -n "${domain:-}" ]; then
 fi
 chown "$app:$app" "$data_dir/router.config" 2>/dev/null || true
 
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+
 systemctl daemon-reload
 systemctl restart "$app"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
 
 ynh_script_progression "I2P upgrade complete."

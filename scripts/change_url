@@ -1,9 +1,23 @@
 #!/bin/bash
+
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
 source /usr/share/yunohost/helpers
+
+#=================================================
+# CHECK THE NEW PATH
+#=================================================
 
 if [ "$path" != "/" ]; then
     ynh_die --message="The I2P console UI uses absolute URLs and only works at the root of a domain (path must be '/')."
 fi
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
 
 ynh_script_progression "Moving $app from $old_domain$old_path to $domain$path..."
 
@@ -15,6 +29,10 @@ ynh_app_setting_set --key=path --value="$path"
 
 ynh_config_add_nginx
 
+#=================================================
+# SPECIFIC MODIFICATIONS
+#=================================================
+
 # Update the console's Host allow-list to the new domain (edit while down:
 # the router persists router.config on shutdown and would clobber a live edit)
 ynh_app_setting_set --key=console_allowed_hosts --value="localhost,127.0.0.1,[::1],$domain"
@@ -23,5 +41,9 @@ sed -i "s|^routerconsole.allowedHosts=.*|# removed|" "$data_dir/router.config"
 echo "routerconsole.allowedHosts=localhost,127.0.0.1,[::1],$domain" >> "$data_dir/router.config"
 chown "$app:$app" "$data_dir/router.config"
 systemctl restart "$app"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
 
 ynh_script_progression "Done. Console: https://$domain$path (SSO-gated)."
