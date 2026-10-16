@@ -72,6 +72,7 @@ chown -R "$app:$app" "$data_dir"
 
 ynh_script_progression "Configuring systemd service..."
 ynh_config_add_systemd
+yunohost service add "$app" --description="I2P router" --needs_exposed_ports "$port_ext"
 ynh_systemctl --service="$app" --action=start --log_path=systemd --timeout=300
 
 #=================================================

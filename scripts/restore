@@ -15,6 +15,7 @@ source /usr/share/yunohost/helpers
 ynh_script_progression "Restoring systemd unit..."
 ynh_safe_rm "/etc/systemd/system/$app.service"
 ynh_restore "/etc/systemd/system/$app.service"
+yunohost service add "$app" --description="I2P router" --needs_exposed_ports "$port_ext"
 
 #=================================================
 # RESTORE THE DATA DIRECTORY
